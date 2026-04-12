@@ -17,6 +17,12 @@ SPEC_FILE = Path("Fishing Bot V5 hotfix.spec")
 DIST_EXE = Path("dist") / "Fishing Bot.exe"
 UPDATE_JSON_FILE = Path("update.json")
 ASSET_NAME = "Fishing Bot.exe"
+VERSION_INFO_FILE = Path("file_version_info.txt")
+
+PRODUCT_NAME = "Fishing Bot"
+FILE_DESCRIPTION = "Fishing Bot Launcher"
+COMPANY_NAME = "Markell196"
+LEGAL_COPYRIGHT = "2026 by Markell196"
 
 GIT_CANDIDATES = [
     r"C:\\Program Files\\Git\\cmd\\git.exe",
@@ -98,6 +104,40 @@ def ensure_git_identity(git_exe: str, repo_dir: Path) -> None:
 def validate_version(version: str) -> None:
     if not re.fullmatch(r"\d+\.\d+\.\d+", version.strip()):
         raise ReleaseError("Version must match semantic format X.Y.Z, for example 5.0.1")
+
+
+def version_to_file_tuple(version: str) -> tuple[int, int, int, int]:
+    parts = [int(p) for p in version.strip().split(".") if p.strip().isdigit()]
+    while len(parts) < 4:
+        parts.append(0)
+    return (parts[0], parts[1], parts[2], parts[3])
+
+
+def write_windows_version_info(version: str, out_path: Path, original_filename: str) -> None:
+    a, b, c, d = version_to_file_tuple(version)
+    content = (
+        "# UTF-8\n"
+        "VSVersionInfo(\n"
+        f"  ffi=FixedFileInfo(filevers=({a}, {b}, {c}, {d}), prodvers=({a}, {b}, {c}, {d}), "
+        "mask=0x3F, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),\n"
+        "  kids=[\n"
+        "    StringFileInfo([\n"
+        "      StringTable('040904B0', [\n"
+        f"        StringStruct('CompanyName', '{COMPANY_NAME}'),\n"
+        f"        StringStruct('FileDescription', '{FILE_DESCRIPTION}'),\n"
+        f"        StringStruct('FileVersion', '{version}'),\n"
+        f"        StringStruct('InternalName', '{PRODUCT_NAME}'),\n"
+        f"        StringStruct('LegalCopyright', '{LEGAL_COPYRIGHT}'),\n"
+        f"        StringStruct('OriginalFilename', '{original_filename}'),\n"
+        f"        StringStruct('ProductName', '{PRODUCT_NAME}'),\n"
+        f"        StringStruct('ProductVersion', '{version}')\n"
+        "      ])\n"
+        "    ]),\n"
+        "    VarFileInfo([VarStruct('Translation', [1033, 1200])])\n"
+        "  ]\n"
+        ")\n"
+    )
+    out_path.write_text(content, encoding="utf-8")
 
 
 def update_launcher_version(new_version: str, launcher_path: Path) -> str:
@@ -282,11 +322,14 @@ def main() -> int:
     if not spec_path.is_file():
         raise ReleaseError(f"Spec file not found: {spec_path}")
 
-    print(f"[1/5] Updating launcher version to {version}...")
+    print(f"[1/6] Updating launcher version to {version}...")
     old_version = update_launcher_version(version, launcher_path)
     print(f"Version: {old_version} -> {version}")
 
-    print("[2/5] Building EXE via PyInstaller...")
+    print("[2/6] Writing EXE version metadata...")
+    write_windows_version_info(version, repo_dir / VERSION_INFO_FILE, DIST_EXE.name)
+
+    print("[3/6] Building EXE via PyInstaller...")
     run([sys.executable, "-m", "PyInstaller", "--noconfirm", str(SPEC_FILE)], cwd=repo_dir)
     exe_path = repo_dir / DIST_EXE
     if not exe_path.is_file():
@@ -297,14 +340,14 @@ def main() -> int:
     if not args.skip_upload:
         if not args.token.strip():
             raise ReleaseError("GitHub token is required. Pass --token or set GITHUB_TOKEN.")
-        print("[3/5] Creating/updating GitHub release and uploading EXE...")
+        print("[4/6] Creating/updating GitHub release and uploading EXE...")
         tag = f"v{version}"
         release = ensure_release(args.owner, args.repo, tag, args.token.strip())
         uploaded_download_url = upload_release_asset(args.owner, args.repo, release, exe_path, args.token.strip())
     else:
-        print("[3/5] Skipped release upload (--skip-upload)")
+        print("[4/6] Skipped release upload (--skip-upload)")
 
-    print("[4/5] Writing update.json...")
+    print("[5/6] Writing update.json...")
     from urllib.parse import quote
 
     if uploaded_download_url:
@@ -313,11 +356,11 @@ def main() -> int:
         download_url = f"https://github.com/{args.owner}/{args.repo}/releases/latest/download/{quote(ASSET_NAME.replace(' ', '.'))}"
     write_update_json(version, download_url, exe_path, repo_dir / UPDATE_JSON_FILE)
 
-    print("[5/5] Committing and pushing launcher version + update.json...")
+    print("[6/6] Committing and pushing launcher version + metadata + update.json...")
     commit_and_push(
         git_exe,
         repo_dir,
-        [LAUNCHER_FILE, UPDATE_JSON_FILE],
+        [LAUNCHER_FILE, VERSION_INFO_FILE, UPDATE_JSON_FILE],
         f"release: v{version}",
         args.remote,
         args.branch,
