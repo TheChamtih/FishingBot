@@ -14,9 +14,9 @@ from urllib.request import Request, urlopen
 
 LAUNCHER_FILE = Path("bot2_v5_launcher.py")
 SPEC_FILE = Path("Fishing Bot V5 hotfix.spec")
-DIST_EXE = Path("dist") / "Fishing Bot V5 hotfix.exe"
+DIST_EXE = Path("dist") / "Fishing Bot.exe"
 UPDATE_JSON_FILE = Path("update.json")
-ASSET_NAME = "Fishing Bot V5 hotfix.exe"
+ASSET_NAME = "Fishing Bot.exe"
 
 GIT_CANDIDATES = [
     r"C:\\Program Files\\Git\\cmd\\git.exe",
@@ -190,8 +190,9 @@ def upload_release_asset(owner: str, repo: str, release: dict, exe_path: Path, t
     assets_url = f"https://api.github.com/repos/{owner}/{repo}/releases/{release_id}/assets"
     assets = github_api_json("GET", assets_url, token)
     if isinstance(assets, list):
+        target_asset_names = {exe_path.name, exe_path.name.replace(" ", ".")}
         for asset in assets:
-            if str(asset.get("name", "")) == exe_path.name:
+            if str(asset.get("name", "")) in target_asset_names:
                 asset_id = int(asset.get("id", 0))
                 if asset_id > 0:
                     delete_url = f"https://api.github.com/repos/{owner}/{repo}/releases/assets/{asset_id}"
@@ -309,7 +310,7 @@ def main() -> int:
     if uploaded_download_url:
         download_url = uploaded_download_url
     else:
-        download_url = f"https://github.com/{args.owner}/{args.repo}/releases/latest/download/{quote(ASSET_NAME)}"
+        download_url = f"https://github.com/{args.owner}/{args.repo}/releases/latest/download/{quote(ASSET_NAME.replace(' ', '.'))}"
     write_update_json(version, download_url, exe_path, repo_dir / UPDATE_JSON_FILE)
 
     print("[5/5] Committing and pushing launcher version + update.json...")
