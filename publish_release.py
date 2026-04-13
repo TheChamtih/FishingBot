@@ -13,11 +13,13 @@ from urllib.request import Request, urlopen
 
 
 LAUNCHER_FILE = Path("bot2_v5_launcher.py")
+BOT_CORE_FILE = Path("bot2_v5.py")
 SPEC_FILE = Path("Fishing Bot V5 hotfix.spec")
 DIST_EXE = Path("dist") / "Fishing Bot.exe"
 UPDATE_JSON_FILE = Path("update.json")
 ASSET_NAME = "Fishing Bot.exe"
 VERSION_INFO_FILE = Path("file_version_info.txt")
+RELEASE_SCRIPT_FILE = Path("publish_release.py")
 
 PRODUCT_NAME = "Fishing Bot"
 FILE_DESCRIPTION = "Fishing Bot Launcher"
@@ -318,6 +320,10 @@ def main() -> int:
     if not launcher_path.is_file():
         raise ReleaseError(f"Launcher file not found: {launcher_path}")
 
+    bot_core_path = repo_dir / BOT_CORE_FILE
+    if not bot_core_path.is_file():
+        raise ReleaseError(f"Bot core file not found: {bot_core_path}")
+
     spec_path = repo_dir / SPEC_FILE
     if not spec_path.is_file():
         raise ReleaseError(f"Spec file not found: {spec_path}")
@@ -356,11 +362,11 @@ def main() -> int:
         download_url = f"https://github.com/{args.owner}/{args.repo}/releases/latest/download/{quote(ASSET_NAME.replace(' ', '.'))}"
     write_update_json(version, download_url, exe_path, repo_dir / UPDATE_JSON_FILE)
 
-    print("[6/6] Committing and pushing launcher version + metadata + update.json...")
+    print("[6/6] Committing and pushing release files...")
     commit_and_push(
         git_exe,
         repo_dir,
-        [LAUNCHER_FILE, VERSION_INFO_FILE, UPDATE_JSON_FILE],
+        [LAUNCHER_FILE, BOT_CORE_FILE, VERSION_INFO_FILE, UPDATE_JSON_FILE, RELEASE_SCRIPT_FILE],
         f"release: v{version}",
         args.remote,
         args.branch,
