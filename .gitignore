@@ -1,0 +1,12 @@
+# Keep local source code private (not pushed to remote)
+bot2_v5.py
+bot2_v5_launcher.py
+
+# Local runtime/build artifacts
+__pycache__/
+build/
+dist/
+stats/
+tessdata/
+settings.json
+bot2_v5_launcher_settings.json

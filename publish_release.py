@@ -20,11 +20,13 @@ UPDATE_JSON_FILE = Path("update.json")
 ASSET_NAME = "Fishing Bot.exe"
 VERSION_INFO_FILE = Path("file_version_info.txt")
 RELEASE_SCRIPT_FILE = Path("publish_release.py")
+GITIGNORE_FILE = Path(".gitignore")
 
 PRODUCT_NAME = "Fishing Bot"
 FILE_DESCRIPTION = "Fishing Bot Launcher"
 COMPANY_NAME = "Markell196"
 LEGAL_COPYRIGHT = "2026 by Markell196"
+DEFAULT_PUBLISH_MODE = "release-only"
 
 GIT_CANDIDATES = [
     r"C:\\Program Files\\Git\\cmd\\git.exe",
@@ -303,6 +305,15 @@ def main() -> int:
         action="store_true",
         help="Skip GitHub Release upload (not recommended for production update.json)",
     )
+    parser.add_argument(
+        "--publish-mode",
+        choices=("release-only", "with-source-push"),
+        default=DEFAULT_PUBLISH_MODE,
+        help=(
+            "Commit mode after build: 'release-only' commits only manifest/script metadata; "
+            "'with-source-push' also commits launcher/bot sources."
+        ),
+    )
     args = parser.parse_args()
 
     repo_dir = Path.cwd()
@@ -363,10 +374,23 @@ def main() -> int:
     write_update_json(version, download_url, exe_path, repo_dir / UPDATE_JSON_FILE)
 
     print("[6/6] Committing and pushing release files...")
+    if args.publish_mode == "with-source-push":
+        files_to_commit = [
+            LAUNCHER_FILE,
+            BOT_CORE_FILE,
+            VERSION_INFO_FILE,
+            UPDATE_JSON_FILE,
+            RELEASE_SCRIPT_FILE,
+        ]
+    else:
+        files_to_commit = [UPDATE_JSON_FILE, RELEASE_SCRIPT_FILE]
+        if (repo_dir / GITIGNORE_FILE).is_file():
+            files_to_commit.append(GITIGNORE_FILE)
+
     commit_and_push(
         git_exe,
         repo_dir,
-        [LAUNCHER_FILE, BOT_CORE_FILE, VERSION_INFO_FILE, UPDATE_JSON_FILE, RELEASE_SCRIPT_FILE],
+        files_to_commit,
         f"release: v{version}",
         args.remote,
         args.branch,
