@@ -17,6 +17,7 @@ BOT_CORE_FILE = Path("bot2_v5.py")
 SPEC_FILE = Path("Fishing Bot V5 hotfix.spec")
 DIST_EXE = Path("dist") / "Fishing Bot.exe"
 UPDATE_JSON_FILE = Path("update.json")
+FISH_PRICES_FILE = Path("fish_prices.json")
 ASSET_NAME = "Fishing Bot.exe"
 VERSION_INFO_FILE = Path("file_version_info.txt")
 RELEASE_SCRIPT_FILE = Path("publish_release.py")
@@ -380,10 +381,11 @@ def main() -> int:
             BOT_CORE_FILE,
             VERSION_INFO_FILE,
             UPDATE_JSON_FILE,
+            FISH_PRICES_FILE,
             RELEASE_SCRIPT_FILE,
         ]
     else:
-        files_to_commit = [UPDATE_JSON_FILE, RELEASE_SCRIPT_FILE]
+        files_to_commit = [UPDATE_JSON_FILE, FISH_PRICES_FILE, RELEASE_SCRIPT_FILE]
         if (repo_dir / GITIGNORE_FILE).is_file():
             files_to_commit.append(GITIGNORE_FILE)
 
